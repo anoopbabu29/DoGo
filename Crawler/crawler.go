@@ -124,6 +124,11 @@ func processWords(index int, element *goquery.Selection) {
 		}
 	}
 }
+
+//http://www.nonprofitfacts.com/CO/Pikes-Peak-Library-District-Foundation-Inc.html
+//http://whois.domaintools.com/usfscp.com
+//https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads
+
 func main() {
 	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "../Special/DoGo-80cbcac25e42.json")
 	os.Setenv("GOOGLE_CLOUD_PROJECT", "dogo-236814")
@@ -158,10 +163,9 @@ func main() {
 	temp := strings.Split(dataStr, "\n")
 
 	for l, line := range temp {
-		if l < 900 {
+		if l < 100 {
 			continue
 		}
-
 		linCont := strings.Split(line, "|")
 		i := 0
 		for _, temp2 := range linCont {
@@ -177,7 +181,11 @@ func main() {
 		}
 
 		searchStr := testEntry.orgName
-		reg, _ := regexp.Compile("[^a-zA-Z0-9+ ]+")
+		reg, e1 := regexp.Compile("[^a-zA-Z0-9+ ]+")
+		if e1 != nil {
+			fmt.Println(e1)
+			continue
+		}
 		searchStr = reg.ReplaceAllString(searchStr, "")
 		searchStr = strings.Replace(searchStr, " ", "+", -1)
 
@@ -185,14 +193,15 @@ func main() {
 		var s string
 
 		resp2, err8 := gosearcher.BingScrape(testEntry.orgName, "com", nil, 1, 1, 1)
-		fmt.Println(resp2)
-		time.Sleep(3 * time.Second)
 		if err8 != nil {
 			continue
 		}
+		fmt.Println(resp2)
+		time.Sleep(5 * time.Second)
+
 		for _, res := range resp2 {
 			s = res.ResultURL
-			break
+			continue
 		}
 
 		if strings.Contains(s, "facebook") {
@@ -253,7 +262,10 @@ func main() {
 			testEntry.yearsHosted = 0
 			continue
 		} else {
-			doc, _ := goquery.NewDocumentFromReader(resp.Body)
+			doc, err2 := goquery.NewDocumentFromReader(resp.Body)
+			if err2 != nil {
+				continue
+			}
 			doc.Find(".table > tbody > tr:last-child > td:nth-child(2)").Each(func(i int, element *goquery.Selection) {
 				fmt.Println("h13")
 				text := element.Text()
@@ -264,28 +276,34 @@ func main() {
 			})
 		}
 
-		resp, er := http.Get("http://www.nonprofitfacts.com/" + testEntry.state + "/" + searchStr)
+		resp, er := http.Get("http://www.nonprofitfacts.com/" + testEntry.state + "/" + searchStr + ".html")
 		if er != nil {
 			fmt.Println("h14")
 			testEntry.assets = 0
 			continue
 		} else {
-			doc, _ := goquery.NewDocumentFromReader(resp.Body)
+			doc, errr := goquery.NewDocumentFromReader(resp.Body)
+			if errr != nil {
+				continue
+			}
 
 			doc.Find("#generalInfo > tbody > tr:nth-child(16) > td:nth-child(2)").Each(func(i int, element *goquery.Selection) {
 				fmt.Println("h15")
 				text := element.Text()
-				reg, _ := regexp.Compile("[^0-9]+")
+				reg, err2 := regexp.Compile("[^0-9]+")
+				if err2 != nil {
+					return
+				}
 				text = reg.ReplaceAllString(text, "")
-				years, _ := strconv.Atoi(text)
+				years, err3 := strconv.Atoi(text)
+				if err3 != nil {
+					return
+				}
 				testEntry.assets = int64(years)
 			})
 		}
 
 		fmt.Println(l)
-		if l > 2000 {
-			break
-		}
 
 		testEntry.donType = ""
 		fmt.Println(testEntry)
@@ -301,8 +319,12 @@ func main() {
 		job, err2 := query2.Run(ctx)
 		if err2 != nil {
 			fmt.Println(err2)
+			continue
 		}
-		stat, _ := job.Status(ctx)
+		stat, err3 := job.Status(ctx)
+		if err3 != nil {
+			continue
+		}
 		fmt.Println(stat)
 
 	}

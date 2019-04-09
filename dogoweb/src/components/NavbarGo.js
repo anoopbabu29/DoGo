@@ -26,8 +26,13 @@ const style = {
 }
 
 function getQueries(){
-    $.ajax({url: "https://localhost:3000/api/getQuery", method: "POST", data: $('#inp').val()}).done(function(resp){console.log(resp)});
-    
+    $.ajax({
+        url: "/api/getQuery", 
+        method: "POST", 
+        data: { "q": $('#inp').val() }
+    }).done(function(resp){
+        console.log(resp)
+    });
 }
 
 class NavbarGo extends Component {
@@ -44,7 +49,7 @@ class NavbarGo extends Component {
                             <Paper style={{padding: '2px 4px',display: 'flex',alignItems: 'center',width: 600,marginLeft: 'auto', marginRight: 'auto', borderRadius: 50}}  elevation={0}>   
                                 <InputBase id="inp" placeholder="Search to Donate" style={{width: 600, marginLeft: 15}} />
                                 <Divider styles={{width: 1,height: 28,margin: 4,}} />
-                                <IconButton color="primary"  >
+                                <IconButton color="primary"  onClick={getQueries}>
                                     <SearchIcon />
                                 </IconButton>
                             </Paper>

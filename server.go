@@ -1,4 +1,4 @@
-/**
+/*
  * This file provided by Facebook is for non-commercial testing and evaluation
  * purposes only. Facebook reserves all rights not expressly granted.
  *
@@ -125,17 +125,17 @@ func getQuery(w http.ResponseWriter, r *http.Request) {
 
 	// Read the comments from the file.
 	fmt.Println(r)
-	commentData, err := ioutil.ReadFile(dataFile)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Unable to read the data file (%s): %s", dataFile, err), http.StatusInternalServerError)
-		return
-	}
 
 	if r.Method == "POST" {
+		if err := r.ParseForm(); err != nil {
+			fmt.Fprintf(w, "ParseForm() err: %v", err)
+			return
+		}
 
-		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "../DoGo-80cbcac25e42.json")
-		os.Setenv("GOOGLE_CLOUD_PROJECT", "dogo-236814")
-		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "DoGo-80cbcac25e42.json")
+		fmt.Println(r.Form)
+		fmt.Println(r.FormValue("q"))
+
+		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "./Special/DoGo-80cbcac25e42.json")
 		os.Setenv("GOOGLE_CLOUD_PROJECT", "dogo-236814")
 
 		proj := os.Getenv("GOOGLE_CLOUD_PROJECT")
@@ -144,27 +144,43 @@ func getQuery(w http.ResponseWriter, r *http.Request) {
 			os.Exit(1)
 		}
 		ctx := context.Background()
-		client, _ := bigquery.NewClient(ctx, proj)
-		var comments string
-		if err := json.Unmarshal(commentData, &comments); err != nil {
-			http.Error(w, fmt.Sprintf("Unable to Unmarshal comments from data file (%s): %s", dataFile, err), http.StatusInternalServerError)
-			return
+		client, err9 := bigquery.NewClient(ctx, proj)
+		if err9 != nil {
+			fmt.Println(err9)
 		}
+		fmt.Println(ctx)
+
+		// var comments string
+		// if err := json.Unmarshal(commentData, &comments); err != nil {
+		// 	http.Error(w, fmt.Sprintf("Unable to Unmarshal comments from data file (%s): %s", dataFile, err), http.StatusInternalServerError)
+		// 	return
+		// }
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		query2 := client.Query("Select * FROM DoGoOrgInfo.webInfo WHERE wordCont LIKE " + comments + "%;")
+		query2 := client.Query("Select * FROM DoGoOrgInfo.webInfo WHERE wordCont LIKE '%" + r.FormValue("q") + "%';")
 
-		job, _ := query2.Run(ctx)
+		job, err5 := query2.Run(ctx)
+		if err5 != nil {
+			fmt.Println(err5)
+		}
 
-		it, _ := job.Read(ctx)
+		it, err6 := job.Read(ctx)
+		if err6 != nil {
+			fmt.Println(err6)
+		}
 
 		count := 1
 		var arrStr1 []string
 		var arrStr2 []string
+
+		var mapRet map[string][]string
+
+		mapRet = make(map[string][]string)
+
 		for {
-			var row testData
+			var row []bigquery.Value
 			err := it.Next(&row)
 			if err == iterator.Done {
 				break
@@ -172,28 +188,30 @@ func getQuery(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return
 			}
+			fmt.Println(row[0])
+			//var org string = row[0].(string)
 
-			arrStr1 = append(arrStr1, row.orgName)
-			arrStr2 = append(arrStr2, row.webName)
+			arrStr1 = append(arrStr1, row[0].(string))
+			arrStr2 = append(arrStr2, row[1].(string))
 
 			count++
 
-			if count == 10 {
+			if count > 10 {
 				break
 			}
 
 		}
-
-		var mapRet map[string][]string
-
-		mapRet = make(map[string][]string)
-
-		mapRet["webName"] = arrStr2
 		mapRet["orgName"] = arrStr1
+		mapRet["webName"] = arrStr2
 
-		data, _ := json.Marshal(mapRet)
+		data, err3 := json.Marshal(mapRet)
+		if err3 != nil {
+			fmt.Println(err3)
+			return
+		}
 
 		io.Copy(w, bytes.NewReader(data))
+
 	}
 }
 

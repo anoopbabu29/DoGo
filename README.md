@@ -18,3 +18,4 @@ Web Scraping
 
 ## What's next for DoGo
 Connect it! Also, having more accurate information about the website describing them and fine tuning other metrics. 
+
